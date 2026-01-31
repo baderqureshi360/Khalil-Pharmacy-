@@ -54,6 +54,7 @@ export function useSales() {
     try {
       setError(null);
       // Optimize query - select only required fields
+      // Include discount if column exists (graceful fallback)
       const { data, error: queryError } = await supabase
         .from('sales')
         .select(`
@@ -64,6 +65,25 @@ export function useSales() {
         .limit(MAX_RECORDS_PER_QUERY);
       
       if (queryError) {
+        // If error is about discount column not existing, retry without it
+        if (queryError.message?.includes('discount') || queryError.code === '42703' || queryError.code === 'PGRST116') {
+          console.warn('Discount column not found, retrying without it');
+          const { data: retryData, error: retryError } = await supabase
+            .from('sales')
+            .select(`
+              id, receipt_number, total, payment_method, cashier_id, created_at,
+              items:sale_items(id, sale_id, product_id, product_name, quantity, unit_price, total, batch_deductions)
+            `)
+            .order('created_at', { ascending: false })
+            .limit(MAX_RECORDS_PER_QUERY);
+          
+          if (retryError) {
+            throw retryError;
+          }
+          
+          setSales(Array.isArray(retryData) ? retryData : []);
+          return;
+        }
         throw queryError;
       }
       
@@ -71,7 +91,13 @@ export function useSales() {
       setSales(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load sales';
-      console.error('Error fetching sales:', err);
+      const errorDetails = err && typeof err === 'object' && 'code' in err ? err : null;
+      console.error('Error fetching sales:', {
+        message: errorMessage,
+        error: err,
+        details: errorDetails,
+        code: errorDetails && 'code' in errorDetails ? errorDetails.code : undefined,
+      });
       setError(errorMessage);
       toast.error('Failed to load sales');
       setSales([]); // Set empty array on error

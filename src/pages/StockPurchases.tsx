@@ -1,18 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { formatPKR } from '@/lib/currency';
 import { Badge } from '@/components/ui/badge';
-import { Search } from 'lucide-react';
+import { Search, Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Table,
   TableBody,
@@ -26,18 +33,22 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts, type Product } from '@/hooks/useProducts';
 import { useSales } from '@/hooks/useSales';
 import { Plus, PackagePlus, Package, Layers } from 'lucide-react';
 import { format, parseISO, isBefore, addDays, startOfToday } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function StockPurchases() {
-  const { products, batches, getProductStock, addBatch } = useProducts();
+  const { products, batches, getProductStock, addBatch, fetchProducts } = useProducts();
   const { sales } = useSales();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
+  // Store the selected product object to persist display even when search results change
+  const [savedSelectedProduct, setSavedSelectedProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     productId: '',
     batchNumber: '',
@@ -48,8 +59,17 @@ export default function StockPurchases() {
     supplier: '',
   });
 
+  // Server-side search to handle large datasets
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProducts(search);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [search, fetchProducts]);
+
   const today = startOfToday();
-  const selectedProduct = products.find((p) => p.id === formData.productId);
+  const selectedProduct = products.find((p) => p.id === formData.productId) || (savedSelectedProduct?.id === formData.productId ? savedSelectedProduct : undefined);
 
   // Filter products by search term (name, barcode, and salt_formula)
   // Note: Stock Purchases shows all products (including disabled) for inventory management
@@ -131,6 +151,7 @@ export default function StockPurchases() {
       });
 
       setFormData({ productId: '', batchNumber: '', quantity: '', costPrice: '', sellingPrice: '', expiryDate: '', supplier: '' });
+      setSavedSelectedProduct(null);
       setIsFormOpen(false);
     }
   };
@@ -274,49 +295,71 @@ export default function StockPurchases() {
           <DialogContent className="max-w-lg w-[95vw] sm:w-auto max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Record Stock Purchase</DialogTitle>
+              <DialogDescription>
+                Add a new stock batch with purchase details, pricing, and expiry information.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="product">Product</Label>
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name, barcode, or salt/formula..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-10 h-10 sm:h-9"
-                    />
-                  </div>
-                  <Select
-                    value={formData.productId}
-                    onValueChange={(value) => {
-                      const product = products.find((p) => p.id === value);
-                      // Get latest batch price if available, otherwise leave empty
-                      const latestBatch = batches
-                        .filter(b => b.product_id === value)
-                        .sort((a, b) => new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime())[0];
-                      setFormData({
-                        ...formData,
-                        productId: value,
-                        costPrice: latestBatch?.cost_price.toString() || '',
-                        sellingPrice: latestBatch?.selling_price.toString() || '',
-                        supplier: latestBatch?.supplier || '',
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredProducts.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} {product.strength && `(${product.strength})`} — Stock: {getProductStock(product.id)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="w-full justify-between"
+                    >
+                      {formData.productId
+                        ? (products.find((product) => product.id === formData.productId) || savedSelectedProduct)?.name
+                        : "Select a product..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput 
+                        placeholder="Search by name, barcode, or salt/formula..." 
+                        value={search} 
+                        onValueChange={setSearch} 
+                      />
+                      <CommandList>
+                        <CommandEmpty>No product found.</CommandEmpty>
+                        <CommandGroup>
+                          {filteredProducts.map((product) => (
+                            <CommandItem
+                              key={product.id}
+                              value={product.id}
+                              onSelect={() => {
+                                const latestBatch = batches
+                                  .filter(b => b.product_id === product.id)
+                                  .sort((a, b) => new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime())[0];
+                                
+                                setFormData({
+                                  ...formData,
+                                  productId: product.id,
+                                  costPrice: latestBatch?.cost_price.toString() || '',
+                                  sellingPrice: latestBatch?.selling_price.toString() || '',
+                                  supplier: latestBatch?.supplier || '',
+                                });
+                                setSavedSelectedProduct(product);
+                                setOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.productId === product.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {product.name} {product.strength && `(${product.strength})`} — Stock: {getProductStock(product.id)}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

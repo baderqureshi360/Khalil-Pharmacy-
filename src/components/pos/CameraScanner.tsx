@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Camera, X, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -96,6 +96,9 @@ export function CameraScanner({ open, onOpenChange, onScan }: CameraScannerProps
             <Camera className="w-5 h-5" />
             Camera Barcode Scanner
           </DialogTitle>
+          <DialogDescription>
+            Use your device camera to scan barcodes. Point the camera at a barcode to scan.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">

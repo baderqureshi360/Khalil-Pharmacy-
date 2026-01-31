@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Table,
@@ -312,6 +313,9 @@ export default function Users() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information and permissions.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">

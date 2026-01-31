@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -500,6 +501,9 @@ export default function Products() {
           <DialogContent className="max-w-2xl w-[95vw] sm:w-auto max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingProduct ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+              <DialogDescription>
+                {editingProduct ? 'Update product information below.' : 'Fill in the product details to add a new item to your inventory.'}
+              </DialogDescription>
             </DialogHeader>
             <ProductForm
               product={editingProduct || (scannedBarcode ? { barcode: scannedBarcode, name: '', rack_id: null, min_stock: 10 } as any : undefined)}
@@ -523,6 +527,9 @@ export default function Products() {
               <DialogTitle>
                 Batch Details — {viewingProduct?.name} {viewingProduct?.strength}
               </DialogTitle>
+              <DialogDescription>
+                View and manage stock batches for this product. Batches are sorted by expiry date (FEFO).
+              </DialogDescription>
             </DialogHeader>
             <div className="max-h-96 overflow-auto">
               <Table>

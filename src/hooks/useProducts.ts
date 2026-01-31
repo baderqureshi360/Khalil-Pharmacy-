@@ -65,7 +65,9 @@ export function useProducts() {
         const trimmedSearch = searchTerm.trim();
         // Search by name, salt_formula (case-insensitive partial match) and barcode (exact match)
         // Format: "field1.operator.value1,field2.operator.value2"
-        query = query.or(`name.ilike.%${trimmedSearch}%,salt_formula.ilike.%${trimmedSearch}%,barcode.eq.${trimmedSearch}`);
+        // Escape special characters in search term to prevent query injection
+        const escapedSearch = trimmedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_');
+        query = query.or(`name.ilike.%${escapedSearch}%,salt_formula.ilike.%${escapedSearch}%,barcode.eq.${escapedSearch}`);
       }
 
       // Apply rack filter if provided
@@ -73,11 +75,25 @@ export function useProducts() {
         query = query.eq('rack_id', rackId);
       }
 
-      const { data, error: queryError } = await query
-        .order('name')
-        .limit(MAX_RECORDS_PER_QUERY);
+      // Add ordering
+      query = query.order('name');
+
+      // Only apply limit if NOT searching to allow full search results
+      if (!searchTerm || searchTerm.trim() === '') {
+        query = query.limit(MAX_RECORDS_PER_QUERY);
+      }
+
+      const { data, error: queryError } = await query;
 
       if (queryError) {
+        const errorDetails = queryError && typeof queryError === 'object' ? queryError : null;
+        console.error('Error fetching products:', {
+          message: queryError.message,
+          code: queryError.code,
+          details: queryError.details,
+          hint: queryError.hint,
+          error: queryError,
+        });
         throw queryError;
       }
 
@@ -85,7 +101,12 @@ export function useProducts() {
       setProducts(Array.isArray(data) ? data : []);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load products';
-      console.error('Error fetching products:', err);
+      const errorDetails = err && typeof err === 'object' && 'code' in err ? err : null;
+      console.error('Error fetching products:', {
+        message: errorMessage,
+        error: err,
+        details: errorDetails,
+      });
       setError(errorMessage);
       toast.error('Failed to load products');
       setProducts([]); // Set empty array on error

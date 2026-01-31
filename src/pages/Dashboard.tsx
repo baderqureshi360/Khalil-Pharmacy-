@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { TrendingUp, Package, AlertTriangle, Clock, Banknote, Layers, X } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -6,6 +6,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useSales } from '@/hooks/useSales';
 import { formatPKR } from '@/lib/currency';
 import { format, parseISO, startOfToday } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Table,
   TableBody,
@@ -21,6 +22,26 @@ export default function Dashboard() {
   const { sales } = useSales();
   const today = startOfToday();
   const [dismissedExpiredAlert, setDismissedExpiredAlert] = useState(false);
+  const [totalProductCount, setTotalProductCount] = useState<number | null>(null);
+
+  // Fetch true product count directly from DB to avoid pagination limits
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('products')
+          .select('*', { count: 'exact', head: true })
+          .neq('is_active', false);
+        
+        if (!error && count !== null) {
+          setTotalProductCount(count);
+        }
+      } catch (err) {
+        console.error('Error fetching product count:', err);
+      }
+    };
+    fetchCount();
+  }, []);
 
   const expiringBatches = getExpiringBatches(30);
   const expiredBatches = getExpiredBatches();
@@ -48,7 +69,7 @@ export default function Dashboard() {
 
     return {
       todaySales,
-      totalProducts: safeProducts.length,
+      totalProducts: totalProductCount !== null ? totalProductCount : safeProducts.length,
       lowStockCount: lowStockProducts.length,
       outOfStockCount: outOfStockProducts.length,
       expiringCount: safeExpiringBatches.length,
@@ -56,7 +77,7 @@ export default function Dashboard() {
       lowStockProducts,
       outOfStockProducts,
     };
-  }, [products, sales, today, getProductStock, expiringBatches, expiredBatches]);
+  }, [products, sales, today, getProductStock, expiringBatches, expiredBatches, totalProductCount]);
 
   const recentSales = useMemo(() => {
     const safeSales = Array.isArray(sales) ? sales : [];

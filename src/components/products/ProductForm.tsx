@@ -261,7 +261,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
           <div className="space-y-2">
             <Label htmlFor="dosageForm">Dosage Form</Label>
             <Select
-              value={formData.dosage_form}
+              value={formData.dosage_form || ''}
               onValueChange={(value) => setFormData({ ...formData, dosage_form: value })}
             >
               <SelectTrigger>
@@ -349,10 +349,12 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
             ) : (
               <>
                 <Select
-                  value={formData.rack_id && formData.rack_id.trim() !== '' ? formData.rack_id : undefined}
+                  value={formData.rack_id && formData.rack_id.trim() !== '' ? formData.rack_id : ''}
                   onValueChange={(value) => {
                     if (value && value.trim() !== '') {
                       setFormData({ ...formData, rack_id: value });
+                    } else {
+                      setFormData({ ...formData, rack_id: '' });
                     }
                   }}
                   required

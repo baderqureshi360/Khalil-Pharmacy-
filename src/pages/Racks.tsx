@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
@@ -133,6 +134,9 @@ export default function Racks() {
               <DialogContent className="w-[95vw] sm:w-auto max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Rack</DialogTitle>
+                <DialogDescription>
+                  Create a new rack or section to organize your products.
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -313,6 +317,9 @@ export default function Racks() {
               </div>
               Products in {selectedRack?.name}
             </DialogTitle>
+            <DialogDescription>
+              View all products assigned to this rack.
+            </DialogDescription>
           </DialogHeader>
           <div className="overflow-auto max-h-[60vh]">
             {rackProducts.length === 0 ? (
@@ -387,6 +394,9 @@ export default function Racks() {
           <DialogContent className="w-[95vw] sm:w-auto max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Rack</DialogTitle>
+              <DialogDescription>
+                Update rack information below.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
