@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProductForm } from '@/components/products/ProductForm';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ import { format, parseISO, isBefore, addDays, startOfToday } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function Products() {
-  const { products, batches, loading, addProduct, updateProduct, disableProduct, enableProduct, getProductStock, getProductBatches } = useProducts();
+  const { products, batches, loading, addProduct, updateProduct, disableProduct, enableProduct, getProductStock, getProductBatches, fetchProducts } = useProducts();
   const { racks } = useRacks();
   const [search, setSearch] = useState('');
   const [selectedRackId, setSelectedRackId] = useState<string>('');
@@ -54,6 +54,11 @@ export default function Products() {
   // Debounce search input to reduce filtering operations
   const debouncedSearch = useDebounce(search, 300);
 
+  // Server-side search to handle large datasets
+  useEffect(() => {
+    fetchProducts(debouncedSearch, selectedRackId);
+  }, [debouncedSearch, selectedRackId, fetchProducts]);
+
   // Memoize filtered products calculation to avoid recalculation on every render
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -67,7 +72,9 @@ export default function Products() {
       // Apply search filter
       if (debouncedSearch && debouncedSearch.trim() !== '') {
         const searchLower = debouncedSearch.toLowerCase().trim();
-        return product.name?.toLowerCase().startsWith(searchLower) || false;
+        const nameMatch = product.name?.toLowerCase().startsWith(searchLower) || false;
+        const barcodeMatch = product.barcode?.toLowerCase() === searchLower;
+        return nameMatch || barcodeMatch;
       }
 
       return true;

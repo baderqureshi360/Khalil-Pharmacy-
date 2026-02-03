@@ -56,7 +56,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <Pill className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">ZamZam Pharmacy</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">ZamZam Medical Store</h1>
             <p className="text-xs text-muted-foreground font-medium">Management System</p>
           </div>
         </div>

@@ -48,7 +48,7 @@ export default function PointOfSale() {
   const [pendingPaymentMethod, setPendingPaymentMethod] = useState<'cash' | 'card' | 'mobile' | null>(null);
   const [search, setSearch] = useState('');
   const [dismissedExpiringAlert, setDismissedExpiringAlert] = useState(false);
-  const { products, getProductByBarcode, getProductStock, getAvailableBatches, getExpiringBatches, refetch } = useProducts();
+  const { products, getProductByBarcode, getProductStock, getAvailableBatches, getExpiringBatches, refetch, fetchProducts } = useProducts();
   const { processSale } = useSales();
   const { receiptData, setReceiptData } = useReceipt();
   
@@ -57,6 +57,11 @@ export default function PointOfSale() {
   
   const today = startOfToday();
   const expiringBatches = useMemo(() => getExpiringBatches(30), [getExpiringBatches]);
+
+  // Server-side search to handle large datasets
+  useEffect(() => {
+    fetchProducts(debouncedSearch);
+  }, [debouncedSearch, fetchProducts]);
 
   // Refetch products and batches when component mounts
   useEffect(() => {
@@ -71,12 +76,11 @@ export default function PointOfSale() {
     return products.filter((product) => {
       if (!product || !product.id) return false;
       
-      // Filter out disabled products in POS
-      if (product.is_active === false) return false;
-      
       if (debouncedSearch && debouncedSearch.trim() !== '') {
         const searchTerm = debouncedSearch.toLowerCase().trim();
-        return product.name.toLowerCase().startsWith(searchTerm);
+        const nameMatch = product.name.toLowerCase().startsWith(searchTerm);
+        const barcodeMatch = product.barcode?.toLowerCase() === searchTerm;
+        return nameMatch || barcodeMatch;
       }
       
       return true;

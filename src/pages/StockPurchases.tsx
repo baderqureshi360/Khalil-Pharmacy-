@@ -79,7 +79,9 @@ export default function StockPurchases() {
     
     if (search && search.trim() !== '') {
       const searchTerm = search.toLowerCase().trim();
-      return product.name.toLowerCase().startsWith(searchTerm);
+      const nameMatch = product.name.toLowerCase().startsWith(searchTerm);
+      const barcodeMatch = product.barcode?.toLowerCase() === searchTerm;
+      return nameMatch || barcodeMatch;
     }
     
     return true;

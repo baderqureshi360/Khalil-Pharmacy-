@@ -23,8 +23,8 @@ export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
       >
         {/* Header */}
         <div className="receipt-header text-center border-b border-dashed border-gray-400 pb-4 mb-4">
-          <h1 className="text-xl font-bold">ZamZam Pharmacy</h1>
-          <p className="text-xs mt-1">Zam Zam Pharmacy, Address Near Shama Bakers, Nawan-Shehr Abbottabad</p>
+          <h1 className="text-xl font-bold">ZamZam Medical Store</h1>
+          <p className="text-xs mt-1">ZamZam Medical Store,  Near Shama Bakers, Nawan-Shehr Abbottabad</p>
           <p className="text-xs text-gray-600 mt-2">
             {format(new Date(), 'MMM dd, yyyy hh:mm a')}
           </p>
@@ -76,7 +76,7 @@ export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
             Payment Method: <span className="capitalize font-semibold">{paymentMethod}</span>
           </p>
           <p className="text-xs mt-3 font-semibold text-gray-700">No return after 2 days</p>
-          <p className="text-xs mt-3 text-gray-600">Thank you for choosing ZamZam Pharmacy.</p>
+          <p className="text-xs mt-3 text-gray-600">Thank you for choosing ZamZam Medical Store.</p>
           <div className="mt-4 text-xs text-gray-400">
             --------------------------------
           </div>

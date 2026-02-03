@@ -126,7 +126,7 @@ export default function Auth() {
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-2 border border-primary/20">
             <Pill className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle className="text-xl font-bold tracking-tight">ZamZam Pharmacy</CardTitle>
+          <CardTitle className="text-xl font-bold tracking-tight">ZamZam Medical Store</CardTitle>
           <CardDescription className="text-xs">
             Owner Management System
           </CardDescription>
