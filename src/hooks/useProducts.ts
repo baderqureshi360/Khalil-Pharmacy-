@@ -63,11 +63,11 @@ export function useProducts() {
       // Apply search filter if provided
       if (searchTerm && searchTerm.trim() !== '') {
         const trimmedSearch = searchTerm.trim();
-        // Search by name, salt_formula (case-insensitive partial match) and barcode (exact match)
+        // Search by name (prefix match) and barcode (exact match)
         // Format: "field1.operator.value1,field2.operator.value2"
         // Escape special characters in search term to prevent query injection
         const escapedSearch = trimmedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_');
-        query = query.or(`name.ilike.%${escapedSearch}%,salt_formula.ilike.%${escapedSearch}%,barcode.eq.${escapedSearch}`);
+        query = query.or(`name.ilike.${escapedSearch}%,barcode.eq.${escapedSearch}`);
       }
 
       // Apply rack filter if provided

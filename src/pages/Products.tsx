@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProductForm } from '@/components/products/ProductForm';
-import { BarcodeScanner } from '@/components/pos/BarcodeScanner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,7 +39,7 @@ import { format, parseISO, isBefore, addDays, startOfToday } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function Products() {
-  const { products, batches, loading, addProduct, updateProduct, disableProduct, enableProduct, getProductStock, getProductBatches, getProductByBarcode } = useProducts();
+  const { products, batches, loading, addProduct, updateProduct, disableProduct, enableProduct, getProductStock, getProductBatches } = useProducts();
   const { racks } = useRacks();
   const [search, setSearch] = useState('');
   const [selectedRackId, setSelectedRackId] = useState<string>('');
@@ -49,26 +48,6 @@ export default function Products() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [enableId, setEnableId] = useState<string | null>(null);
   const [viewBatchesId, setViewBatchesId] = useState<string | null>(null);
-  const [scannedBarcode, setScannedBarcode] = useState<string>('');
-
-  const handleBarcodeScan = (barcode: string) => {
-    const product = getProductByBarcode(barcode);
-    if (product) {
-      // Product found - show details and allow edit
-      setEditingProduct(product);
-      setIsFormOpen(true);
-      toast.success('Product found', {
-        description: `${product.name} - Rack: ${product.rack?.name || 'N/A'}`,
-      });
-    } else {
-      // Product not found - open form with barcode pre-filled
-      setScannedBarcode(barcode);
-      setIsFormOpen(true);
-      toast.info('Product not found', {
-        description: 'Creating new product with scanned barcode',
-      });
-    }
-  };
 
   const today = startOfToday();
 
@@ -88,14 +67,7 @@ export default function Products() {
       // Apply search filter
       if (debouncedSearch && debouncedSearch.trim() !== '') {
         const searchLower = debouncedSearch.toLowerCase().trim();
-        const matchesName = product.name?.toLowerCase().includes(searchLower) || false;
-        const matchesBarcode = product.barcode?.toLowerCase().includes(searchLower) || false;
-        const matchesCategory = product.category?.toLowerCase().includes(searchLower) || false;
-        const matchesSaltFormula = product.salt_formula?.toLowerCase().includes(searchLower) || false;
-
-        if (!matchesName && !matchesBarcode && !matchesCategory && !matchesSaltFormula) {
-          return false;
-        }
+        return product.name?.toLowerCase().startsWith(searchLower) || false;
       }
 
       return true;
@@ -117,7 +89,6 @@ export default function Products() {
         toast.success('Product added successfully');
         setIsFormOpen(false);
         setEditingProduct(undefined);
-        setScannedBarcode('');
       }
       // Error messages are already shown by addProduct hook - don't override with generic message
     }
@@ -192,15 +163,9 @@ export default function Products() {
               <div className="relative flex-1 w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, salt/formula, barcode, or category..."
+                  placeholder="Search products by name..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    // Support barcode scanner (Enter key)
-                    if (e.key === 'Enter' && search.trim()) {
-                      handleBarcodeScan(search.trim());
-                    }
-                  }}
                   className="pl-10 h-10 sm:h-9"
                 />
               </div>
@@ -245,9 +210,6 @@ export default function Products() {
                   </Button>
                 )}
               </div>
-            </div>
-            <div>
-              <BarcodeScanner onScan={handleBarcodeScan} />
             </div>
           </div>
 
@@ -495,7 +457,6 @@ export default function Products() {
           setIsFormOpen(open);
           if (!open) {
             setEditingProduct(undefined);
-            setScannedBarcode('');
           }
         }}>
           <DialogContent className="max-w-2xl w-[95vw] sm:w-auto max-h-[90vh] overflow-y-auto">
@@ -506,15 +467,13 @@ export default function Products() {
               </DialogDescription>
             </DialogHeader>
             <ProductForm
-              product={editingProduct || (scannedBarcode ? { barcode: scannedBarcode, name: '', rack_id: null, min_stock: 10 } as any : undefined)}
+              product={editingProduct}
               onSubmit={async (data) => {
                 await handleSubmit(data);
-                setScannedBarcode('');
               }}
               onCancel={() => {
                 setIsFormOpen(false);
                 setEditingProduct(undefined);
-                setScannedBarcode('');
               }}
             />
           </DialogContent>

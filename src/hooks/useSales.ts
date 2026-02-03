@@ -21,6 +21,20 @@ export interface SaleItem {
   batch_deductions: BatchDeduction[] | null;
 }
 
+export interface ReturnItem {
+  id: string;
+  sale_item_id: string;
+  quantity: number;
+  product_id: string;
+}
+
+export interface SalesReturn {
+  id: string;
+  receipt_number: string;
+  created_at: string;
+  return_items: ReturnItem[];
+}
+
 export interface Sale {
   id: string;
   receipt_number: string;
@@ -29,6 +43,7 @@ export interface Sale {
   cashier_id: string | null;
   created_at: string;
   items?: SaleItem[];
+  returns?: SalesReturn[];
 }
 
 export interface CartItem {
@@ -59,7 +74,8 @@ export function useSales() {
         .from('sales')
         .select(`
           id, receipt_number, total, payment_method, cashier_id, created_at, discount,
-          items:sale_items(id, sale_id, product_id, product_name, quantity, unit_price, total, batch_deductions)
+          items:sale_items(id, sale_id, product_id, product_name, quantity, unit_price, total, batch_deductions),
+          returns:sales_returns(id, receipt_number, created_at, return_items(id, sale_item_id, quantity, product_id))
         `)
         .order('created_at', { ascending: false })
         .limit(MAX_RECORDS_PER_QUERY);
@@ -72,7 +88,8 @@ export function useSales() {
             .from('sales')
             .select(`
               id, receipt_number, total, payment_method, cashier_id, created_at,
-              items:sale_items(id, sale_id, product_id, product_name, quantity, unit_price, total, batch_deductions)
+              items:sale_items(id, sale_id, product_id, product_name, quantity, unit_price, total, batch_deductions),
+              returns:sales_returns(id, receipt_number, created_at, return_items(id, sale_item_id, quantity, product_id))
             `)
             .order('created_at', { ascending: false })
             .limit(MAX_RECORDS_PER_QUERY);
@@ -110,11 +127,35 @@ export function useSales() {
     fetchSales();
   }, [fetchSales]);
 
-  const generateReceiptNumber = () => {
-    const date = new Date();
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-    const timeStr = date.getTime().toString().slice(-6);
-    return `RCP-${dateStr}-${timeStr}`;
+  const generateReceiptNumber = async () => {
+    try {
+      const { data } = await supabase
+        .from('sales')
+        .select('receipt_number')
+        .ilike('receipt_number', 'ZZ-%')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let nextNum = 1;
+      if (data && data.receipt_number) {
+        const parts = data.receipt_number.split('-');
+        if (parts.length === 2) {
+          const num = parseInt(parts[1], 10);
+          if (!isNaN(num)) {
+            nextNum = num + 1;
+          }
+        }
+      }
+      return `ZZ-${nextNum.toString().padStart(5, '0')}`;
+    } catch (error) {
+      console.error('Error generating receipt number:', error);
+      // Fallback to timestamp if generation fails
+      const date = new Date();
+      const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+      const timeStr = date.getTime().toString().slice(-6);
+      return `ZZ-${timeStr.slice(-5)}`;
+    }
   };
 
   interface AvailableBatch {
@@ -190,7 +231,7 @@ export function useSales() {
       }
 
       // Create sale record
-      const receiptNumber = generateReceiptNumber();
+      const receiptNumber = await generateReceiptNumber();
       const total = items.reduce((sum, item) => sum + item.total, 0);
 
       const { data: saleData, error: saleError } = await supabase
@@ -279,6 +320,133 @@ export function useSales() {
     }
   };
 
+  const processReturn = async (
+    saleId: string,
+    returnItems: Array<{
+      sale_item_id: string;
+      product_id: string;
+      quantity: number;
+      batch_deductions?: BatchDeduction[] | null;
+    }>,
+    returnReason: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (!saleId || !returnItems.length) {
+        return { success: false, error: 'Invalid return request' };
+      }
+
+      // Generate Return Receipt Number
+      const date = new Date();
+      const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+      const timeStr = date.getTime().toString().slice(-6);
+      const receiptNumber = `RET-${dateStr}-${timeStr}`;
+
+      // 1. Create Sales Return Record
+      const { data: returnData, error: returnError } = await supabase
+        .from('sales_returns')
+        .insert({
+          sale_id: saleId,
+          receipt_number: receiptNumber,
+          return_reason: returnReason,
+          returned_by: user?.id,
+        })
+        .select()
+        .single();
+
+      if (returnError) throw returnError;
+
+      // 2. Process Return Items and Restore Stock
+      const returnItemsData = [];
+      const batchUpdates: Array<{ id: string; quantity: number }> = [];
+      const batchIdsToFetch = new Set<string>();
+
+      for (const item of returnItems) {
+        let remainingReturnQty = item.quantity;
+        
+        // If we have batch deductions info, use it to restore specific batches
+        if (item.batch_deductions && item.batch_deductions.length > 0) {
+          // Iterate to restore
+          for (const deduction of item.batch_deductions) {
+            if (remainingReturnQty <= 0) break;
+            
+            // We restore up to what was deducted from this batch
+            const restoreQty = Math.min(deduction.quantity, remainingReturnQty);
+            
+            if (restoreQty > 0) {
+               returnItemsData.push({
+                 return_id: returnData.id,
+                 sale_item_id: item.sale_item_id,
+                 product_id: item.product_id,
+                 batch_id: deduction.batch_id,
+                 quantity: restoreQty
+               });
+               
+               batchIdsToFetch.add(deduction.batch_id);
+               remainingReturnQty -= restoreQty;
+            }
+          }
+        } else {
+           // Fallback if no batch info
+           returnItemsData.push({
+             return_id: returnData.id,
+             sale_item_id: item.sale_item_id,
+             product_id: item.product_id,
+             batch_id: null,
+             quantity: remainingReturnQty
+           });
+        }
+      }
+
+      // Insert return items
+      if (returnItemsData.length > 0) {
+        const { error: itemsError } = await supabase
+          .from('return_items')
+          .insert(returnItemsData);
+
+        if (itemsError) throw itemsError;
+      }
+
+      // 3. Restore Stock Quantities
+      if (batchIdsToFetch.size > 0) {
+        const { data: currentBatches } = await supabase
+          .from('stock_batches')
+          .select('id, quantity')
+          .in('id', Array.from(batchIdsToFetch));
+
+        if (currentBatches) {
+          const batchMap = new Map(currentBatches.map(b => [b.id, b.quantity]));
+          
+          // Calculate new quantities
+          for (const item of returnItemsData) {
+            if (item.batch_id) {
+               const currentQty = batchMap.get(item.batch_id) || 0;
+               const newQty = currentQty + item.quantity; // ADD back to stock
+               batchUpdates.push({ id: item.batch_id, quantity: newQty });
+               batchMap.set(item.batch_id, newQty);
+            }
+          }
+
+          // Execute updates
+          await Promise.all(
+            batchUpdates.map(update =>
+              supabase
+                .from('stock_batches')
+                .update({ quantity: update.quantity })
+                .eq('id', update.id)
+            )
+          );
+        }
+      }
+
+      await fetchSales();
+      return { success: true };
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to process return';
+      console.error('Error processing return:', err);
+      return { success: false, error: errorMessage };
+    }
+  };
+
   const getSaleByReceipt = async (receiptNumber: string | null | undefined) => {
     try {
       if (!receiptNumber || typeof receiptNumber !== 'string') {
@@ -316,6 +484,7 @@ export function useSales() {
     loading,
     error,
     processSale,
+    processReturn,
     getSaleByReceipt,
     refetch: stableRefetch,
   };

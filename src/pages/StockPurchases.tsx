@@ -78,18 +78,28 @@ export default function StockPurchases() {
     if (!product || !product.id) return false;
     
     if (search && search.trim() !== '') {
-      const searchLower = search.toLowerCase().trim();
-      const matchesName = product.name?.toLowerCase().includes(searchLower) || false;
-      const matchesBarcode = product.barcode?.toLowerCase().includes(searchLower) || false;
-      const matchesSaltFormula = product.salt_formula?.toLowerCase().includes(searchLower) || false;
-      
-      if (!matchesName && !matchesBarcode && !matchesSaltFormula) {
-        return false;
-      }
+      const searchTerm = search.toLowerCase().trim();
+      return product.name.toLowerCase().startsWith(searchTerm);
     }
     
     return true;
   });
+
+  const handleProductSelect = (product: Product) => {
+    const latestBatch = batches
+      .filter(b => b.product_id === product.id)
+      .sort((a, b) => new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime())[0];
+    
+    setFormData({
+      ...formData,
+      productId: product.id,
+      costPrice: latestBatch?.cost_price.toString() || '',
+      sellingPrice: latestBatch?.selling_price.toString() || '',
+      supplier: latestBatch?.supplier || '',
+    });
+    setSavedSelectedProduct(product);
+    setOpen(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -319,9 +329,9 @@ export default function StockPurchases() {
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                     <Command shouldFilter={false}>
                       <CommandInput 
-                        placeholder="Search by name, barcode, or salt/formula..." 
+                        placeholder="Search products by name..." 
                         value={search} 
-                        onValueChange={setSearch} 
+                        onValueChange={setSearch}
                       />
                       <CommandList>
                         <CommandEmpty>No product found.</CommandEmpty>
@@ -330,21 +340,7 @@ export default function StockPurchases() {
                             <CommandItem
                               key={product.id}
                               value={product.id}
-                              onSelect={() => {
-                                const latestBatch = batches
-                                  .filter(b => b.product_id === product.id)
-                                  .sort((a, b) => new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime())[0];
-                                
-                                setFormData({
-                                  ...formData,
-                                  productId: product.id,
-                                  costPrice: latestBatch?.cost_price.toString() || '',
-                                  sellingPrice: latestBatch?.selling_price.toString() || '',
-                                  supplier: latestBatch?.supplier || '',
-                                });
-                                setSavedSelectedProduct(product);
-                                setOpen(false);
-                              }}
+                              onSelect={() => handleProductSelect(product)}
                             >
                               <Check
                                 className={cn(
