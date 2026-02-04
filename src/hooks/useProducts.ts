@@ -314,7 +314,7 @@ export function useProducts() {
       };
 
       // Prepare payload - include salt_formula if provided (optional field)
-      const payload: any = {
+      const payload = {
         name: product.name.trim(),
         barcode: finalBarcode,
         strength: toOptionalString(product.strength),
@@ -504,7 +504,7 @@ export function useProducts() {
       };
 
       // Include salt_formula if provided (optional field)
-      const finalUpdateData: any = { ...updateData };
+      const finalUpdateData = { ...updateData };
       if (salt_formula !== undefined) {
         const saltFormula = toOptionalString(salt_formula);
         // Include even if null to allow clearing the field

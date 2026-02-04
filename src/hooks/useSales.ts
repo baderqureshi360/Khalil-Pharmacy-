@@ -42,6 +42,7 @@ export interface Sale {
   payment_method: string;
   cashier_id: string | null;
   created_at: string;
+  discount?: number;
   items?: SaleItem[];
   returns?: SalesReturn[];
 }
@@ -447,7 +448,7 @@ export function useSales() {
     }
   };
 
-  const getSaleByReceipt = async (receiptNumber: string | null | undefined) => {
+  const getSaleByReceipt = async (receiptNumber: string | null | undefined): Promise<Sale | null> => {
     try {
       if (!receiptNumber || typeof receiptNumber !== 'string') {
         return null;
@@ -457,7 +458,8 @@ export function useSales() {
         .from('sales')
         .select(`
           *,
-          items:sale_items(*)
+          items:sale_items(*),
+          returns:sales_returns(id, receipt_number, created_at, return_items(id, sale_item_id, quantity, product_id))
         `)
         .eq('receipt_number', receiptNumber)
         .maybeSingle();
@@ -465,7 +467,7 @@ export function useSales() {
       if (queryError) {
         throw queryError;
       }
-      return data || null;
+      return (data as unknown as Sale) || null;
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch sale';
       console.error('Error fetching sale:', err);

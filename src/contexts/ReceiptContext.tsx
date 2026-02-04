@@ -37,6 +37,7 @@ export function ReceiptProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useReceipt() {
   const context = useContext(ReceiptContext);
   if (context === undefined) {

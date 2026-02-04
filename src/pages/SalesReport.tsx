@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { useSales } from '@/hooks/useSales';
+import { useSales, Sale, SaleItem, BatchDeduction, SalesReturn, ReturnItem } from '@/hooks/useSales';
 import { useProducts } from '@/hooks/useProducts';
 import { formatPKR } from '@/lib/currency';
 import {
@@ -31,7 +31,7 @@ export default function SalesReport() {
   
   // Return functionality state
   const [returnReceipt, setReturnReceipt] = useState('');
-  const [foundSale, setFoundSale] = useState<any>(null);
+  const [foundSale, setFoundSale] = useState<Sale | null>(null);
   const [selectedReturnItems, setSelectedReturnItems] = useState<Record<string, number>>({}); // sale_item_id -> quantity
   const [returnReason, setReturnReason] = useState('');
   const [isProcessingReturn, setIsProcessingReturn] = useState(false);
@@ -61,7 +61,7 @@ export default function SalesReport() {
   }, [sales, dateFrom, dateTo]);
 
   // Helper function to get cost price from batch
-  const getCostPrice = (productId: string, batchDeductions: any) => {
+  const getCostPrice = useCallback((productId: string, batchDeductions: BatchDeduction[] | null) => {
     if (!batchDeductions || !Array.isArray(batchDeductions) || batchDeductions.length === 0) {
       return 0;
     }
@@ -72,36 +72,36 @@ export default function SalesReport() {
 
     const batch = batches.find(b => b.id === firstBatchId);
     return batch?.cost_price || 0;
-  };
+  }, [batches]);
 
   // Helper function to calculate profit for a single item
-  const calculateItemProfit = (item: any) => {
+  const calculateItemProfit = useCallback((item: SaleItem) => {
     if (!item) return 0;
     const costPrice = getCostPrice(item.product_id, item.batch_deductions);
     return (item.unit_price - costPrice) * item.quantity;
-  };
+  }, [getCostPrice]);
 
   // Helper function to calculate total profit for a sale
-  const calculateSaleProfit = (sale: any) => {
+  const calculateSaleProfit = useCallback((sale: Sale) => {
     if (!sale?.items || !Array.isArray(sale.items)) return 0;
-    return sale.items.reduce((sum: number, item: any) => sum + calculateItemProfit(item), 0);
-  };
+    return sale.items.reduce((sum: number, item: SaleItem) => sum + calculateItemProfit(item), 0);
+  }, [calculateItemProfit]);
 
   const stats = useMemo(() => {
     let totalRevenue = filteredSales.reduce((sum, sale) => sum + (sale?.total || 0), 0);
     const totalTransactions = filteredSales.length;
     let totalItems = filteredSales.reduce((sum, sale) =>
-      sum + (sale?.items?.reduce((itemSum: number, item: any) => itemSum + (item?.quantity || 0), 0) || 0), 0
+      sum + (sale?.items?.reduce((itemSum: number, item: SaleItem) => itemSum + (item?.quantity || 0), 0) || 0), 0
     );
     let totalProfit = filteredSales.reduce((sum, sale) => sum + calculateSaleProfit(sale), 0);
     
     // Deduct returns
     filteredSales.forEach(sale => {
       if (sale.returns && Array.isArray(sale.returns)) {
-        sale.returns.forEach((ret: any) => {
+        sale.returns.forEach((ret) => {
           if (ret.return_items && Array.isArray(ret.return_items)) {
-            ret.return_items.forEach((retItem: any) => {
-              const originalItem = sale.items?.find((i: any) => i.id === retItem.sale_item_id);
+            ret.return_items.forEach((retItem) => {
+              const originalItem = sale.items?.find((i) => i.id === retItem.sale_item_id);
               if (originalItem) {
                 const refundAmount = originalItem.unit_price * retItem.quantity;
                 const costPrice = getCostPrice(originalItem.product_id, originalItem.batch_deductions);
@@ -120,12 +120,12 @@ export default function SalesReport() {
     const avgTransaction = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
     return { totalRevenue, totalTransactions, avgTransaction, totalItems, totalProfit };
-  }, [filteredSales, batches]);
+  }, [filteredSales, calculateSaleProfit, getCostPrice]);
 
   const totalRefundAmount = useMemo(() => {
     if (!foundSale || !selectedReturnItems) return 0;
     return Object.entries(selectedReturnItems).reduce((sum, [itemId, qty]) => {
-      const item = foundSale.items.find((i: any) => i.id === itemId);
+      const item = foundSale.items?.find((i) => i.id === itemId);
       if (!item) return sum;
       return sum + (item.unit_price * qty);
     }, 0);
@@ -166,13 +166,13 @@ export default function SalesReport() {
   const handleReturnItemChange = (saleItemId: string, checked: boolean) => {
     if (checked) {
       // Default to 1 or max quantity if 1
-      const item = foundSale.items.find((i: any) => i.id === saleItemId);
+      const item = foundSale?.items?.find((i) => i.id === saleItemId);
       if (item) {
         // Calculate max returnable (sold - already returned)
         let alreadyReturned = 0;
-        if (foundSale.returns) {
-           foundSale.returns.forEach((ret: any) => {
-             ret.return_items.forEach((ri: any) => {
+        if (foundSale?.returns) {
+           foundSale.returns.forEach((ret) => {
+             ret.return_items.forEach((ri) => {
                if (ri.sale_item_id === saleItemId) {
                  alreadyReturned += ri.quantity;
                }
@@ -199,13 +199,13 @@ export default function SalesReport() {
   };
 
   const handleQuantityChange = (saleItemId: string, qty: number) => {
-    const item = foundSale.items.find((i: any) => i.id === saleItemId);
+    const item = foundSale?.items?.find((i) => i.id === saleItemId);
     if (!item) return;
 
     let alreadyReturned = 0;
-    if (foundSale.returns) {
-       foundSale.returns.forEach((ret: any) => {
-         ret.return_items.forEach((ri: any) => {
+    if (foundSale?.returns) {
+       foundSale.returns.forEach((ret) => {
+         ret.return_items.forEach((ri) => {
            if (ri.sale_item_id === saleItemId) {
              alreadyReturned += ri.quantity;
            }
@@ -240,7 +240,8 @@ export default function SalesReport() {
     setIsProcessingReturn(true);
     
     const returnItemsList = Object.entries(selectedReturnItems).map(([saleItemId, quantity]) => {
-      const item = foundSale.items.find((i: any) => i.id === saleItemId);
+      const item = foundSale.items?.find((i) => i.id === saleItemId);
+      if (!item) throw new Error("Item not found"); // Should not happen
       return {
         sale_item_id: saleItemId,
         product_id: item.product_id,
@@ -277,9 +278,9 @@ export default function SalesReport() {
     filteredSales.forEach((sale) => {
       if (!sale?.items || !Array.isArray(sale.items)) return;
 
-      sale.items.forEach((item: any, idx: number) => {
+      sale.items.forEach((item: SaleItem, idx: number) => {
         const saleDate = format(new Date(sale.created_at), 'yyyy-MM-dd HH:mm:ss');
-        const discount = (sale as any).discount || 0;
+        const discount = sale.discount || 0;
         const itemDiscount = idx === 0 ? discount : 0; // Apply discount only to first item row
         const itemTotal = idx === 0 && sale.items!.length === 1
           ? sale.total
@@ -448,7 +449,7 @@ export default function SalesReport() {
                     <TableCell className="font-mono text-sm">#{sale.id}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        {sale.items?.map((item: any, idx: number) => (
+                        {sale.items?.map((item, idx) => (
                           <div key={idx} className="text-sm">
                             <span className="font-medium">{item.product_name || 'Unknown'}</span>
                             <span className="text-muted-foreground"> × {item.quantity || 0}</span>
@@ -562,7 +563,7 @@ export default function SalesReport() {
                 )}
 
                 {/* Returned Items History */}
-                {foundSale.returns && foundSale.returns.some((r: any) => r.return_items && r.return_items.length > 0) && (
+                {foundSale.returns && foundSale.returns.some((r) => r.return_items && r.return_items.length > 0) && (
                   <div className="space-y-4">
                     <Label>Returned Items History</Label>
                     <div className="border rounded-lg overflow-hidden">
@@ -578,9 +579,9 @@ export default function SalesReport() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {foundSale.returns.map((ret: any) => 
-                            ret.return_items.map((ri: any) => {
-                               const originalItem = foundSale.items.find((i: any) => i.id === ri.sale_item_id);
+                          {foundSale.returns.map((ret) => 
+                            ret.return_items.map((ri) => {
+                               const originalItem = foundSale.items?.find((i) => i.id === ri.sale_item_id);
                                const amountDeducted = originalItem ? originalItem.unit_price * ri.quantity : 0;
                                const costPrice = originalItem ? getCostPrice(originalItem.product_id, originalItem.batch_deductions) : 0;
                                const profitDeducted = originalItem ? (originalItem.unit_price - costPrice) * ri.quantity : 0;
@@ -617,15 +618,15 @@ export default function SalesReport() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {foundSale.items.map((item: any) => {
+                        {foundSale.items?.map((item) => {
                           const isSelected = !!selectedReturnItems[item.id];
                           const returnQty = selectedReturnItems[item.id] || 0;
                           
                           // Calculate already returned
                            let alreadyReturned = 0;
                            if (foundSale.returns) {
-                              foundSale.returns.forEach((ret: any) => {
-                                ret.return_items.forEach((ri: any) => {
+                              foundSale.returns.forEach((ret) => {
+                                ret.return_items.forEach((ri) => {
                                   if (ri.sale_item_id === item.id) {
                                     alreadyReturned += ri.quantity;
                                   }

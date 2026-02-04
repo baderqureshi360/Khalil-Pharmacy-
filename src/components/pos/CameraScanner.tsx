@@ -40,6 +40,7 @@ export function CameraScanner({ open, onOpenChange, onScan }: CameraScannerProps
     return () => {
       stopScanning();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const startScanning = async () => {

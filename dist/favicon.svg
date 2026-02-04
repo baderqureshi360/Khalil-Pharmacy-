@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Circular background -->
+  <circle cx="32" cy="32" r="32" fill="#1e3a8a"/>
+  
+  <g transform="translate(32, 32)">
+    <!-- Shadow for second capsule (behind) -->
+    <ellipse cx="10" cy="18" rx="8" ry="3" fill="#0f172a" opacity="0.6" transform="rotate(-25)"/>
+    
+    <!-- Second capsule (behind, right) - darker pink top, lighter pink bottom -->
+    <g transform="rotate(-25)">
+      <ellipse cx="8" cy="6" rx="6" ry="10" fill="#ec4899"/>
+      <ellipse cx="8" cy="10" rx="6" ry="10" fill="#fce7f3"/>
+    </g>
+    
+    <!-- Shadow for first capsule (front) -->
+    <ellipse cx="-2" cy="16" rx="8" ry="3" fill="#0f172a" opacity="0.6" transform="rotate(-25)"/>
+    
+    <!-- First capsule (front, left) - golden yellow top, white bottom -->
+    <g transform="rotate(-25)">
+      <ellipse cx="-4" cy="4" rx="6" ry="10" fill="#fbbf24"/>
+      <ellipse cx="-4" cy="8" rx="6" ry="10" fill="#ffffff"/>
+    </g>
+  </g>
+</svg>
