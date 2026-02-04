@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useState } from 'react';
+import { BRANDING } from '@/config/branding';
 
 // Owner-only system - all routes require authentication
 const navItems = [
@@ -56,8 +57,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             <Pill className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">ZamZam Medical Store</h1>
-            <p className="text-xs text-muted-foreground font-medium">Management System</p>
+            <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight truncate">{BRANDING.name}</h1>
+            <p className="text-xs text-muted-foreground font-medium">{BRANDING.tagline}</p>
           </div>
         </div>
       </div>

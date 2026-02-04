@@ -133,8 +133,8 @@ export function useSales() {
       const { data } = await supabase
         .from('sales')
         .select('receipt_number')
-        .ilike('receipt_number', 'ZZ-%')
-        .order('created_at', { ascending: false })
+        .ilike('receipt_number', 'KP-%')
+        .order('receipt_number', { ascending: false })
         .limit(1)
         .maybeSingle();
 
@@ -148,14 +148,10 @@ export function useSales() {
           }
         }
       }
-      return `ZZ-${nextNum.toString().padStart(5, '0')}`;
+      return `KP-${nextNum.toString().padStart(5, '0')}`;
     } catch (error) {
       console.error('Error generating receipt number:', error);
-      // Fallback to timestamp if generation fails
-      const date = new Date();
-      const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
-      const timeStr = date.getTime().toString().slice(-6);
-      return `ZZ-${timeStr.slice(-5)}`;
+      throw new Error('Failed to generate receipt number');
     }
   };
 

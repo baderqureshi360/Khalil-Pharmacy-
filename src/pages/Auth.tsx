@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Pill, User, Mail, Lock, Loader2 } from 'lucide-react';
 import { z } from 'zod';
+import { BRANDING } from '@/config/branding';
 
 const emailSchema = z.string().email('Invalid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -126,10 +127,8 @@ export default function Auth() {
           <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-2 border border-primary/20">
             <Pill className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle className="text-xl font-bold tracking-tight">ZamZam Medical Store</CardTitle>
-          <CardDescription className="text-xs">
-            Owner Management System
-          </CardDescription>
+          <CardTitle className="text-xl font-bold tracking-tight">{BRANDING.name}</CardTitle>
+          <CardDescription className="text-xs">{BRANDING.tagline}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Tabs defaultValue="signin" className="w-full">

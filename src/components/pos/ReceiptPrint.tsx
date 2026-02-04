@@ -2,6 +2,7 @@ import { forwardRef } from 'react';
 import { SaleItem } from '@/types/pharmacy';
 import { formatPKR } from '@/lib/currency';
 import { format } from 'date-fns';
+import { BRANDING } from '@/config/branding';
 
 interface ReceiptPrintProps {
   items: SaleItem[];
@@ -23,8 +24,9 @@ export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
       >
         {/* Header */}
         <div className="receipt-header text-center border-b border-dashed border-gray-400 pb-4 mb-4">
-          <h1 className="text-xl font-bold">ZamZam Medical Store</h1>
-          <p className="text-xs mt-1">ZamZam Medical Store,  Near Shama Bakers, Nawan-Shehr Abbottabad</p>
+          <h1 className="text-xl font-bold">{BRANDING.name}</h1>
+          <p className="text-xs mt-1">{BRANDING.address}</p>
+          <p className="text-xs mt-1">{BRANDING.license}</p>
           <p className="text-xs text-gray-600 mt-2">
             {format(new Date(), 'MMM dd, yyyy hh:mm a')}
           </p>
@@ -75,8 +77,8 @@ export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptPrintProps>(
           <p className="text-xs">
             Payment Method: <span className="capitalize font-semibold">{paymentMethod}</span>
           </p>
-          <p className="text-xs mt-3 font-semibold text-gray-700">No return after 2 days</p>
-          <p className="text-xs mt-3 text-gray-600">Thank you for choosing ZamZam Medical Store.</p>
+          <p className="text-xs mt-3 font-semibold text-gray-700">{BRANDING.returnPolicy}</p>
+          <p className="text-xs mt-3 text-gray-600">{BRANDING.footer}</p>
           <div className="mt-4 text-xs text-gray-400">
             --------------------------------
           </div>

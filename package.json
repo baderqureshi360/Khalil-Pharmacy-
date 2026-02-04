@@ -1,10 +1,10 @@
 {
-  "name": "medichat-stock-pro",
-  "productName": "MediChat Stock Pro",
+  "name": "khalil-pharmacy-system",
+  "productName": "Khalil Pharmacy",
   "private": true,
   "version": "1.0.0",
-  "description": "Medicine catalog and stock management system",
-  "author": "MediChat",
+  "description": "Medicine catalog and stock management system for Khalil Pharmacy",
+  "author": "Khalil Pharmacy",
   "main": "electron/main.js",
   "type": "module",
   "scripts": {

@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
+import { BRANDING } from '@/config/branding';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -24,9 +25,9 @@ export function MainLayout({ children }: MainLayoutProps) {
         </Button>
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-            <span className="text-primary-foreground text-sm font-bold">HH</span>
+            <span className="text-primary-foreground text-sm font-bold">KP</span>
           </div>
-          <span className="text-sm font-semibold text-foreground">Health Haven</span>
+          <span className="text-sm font-semibold text-foreground">{BRANDING.name}</span>
         </div>
         <div className="w-10" /> {/* Spacer for centering */}
       </div>

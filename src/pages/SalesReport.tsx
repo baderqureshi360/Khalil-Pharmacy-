@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay, differenceInDays } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, differenceInDays, differenceInHours } from 'date-fns';
 import { Banknote, Receipt, TrendingUp, Calendar, Package, Download, Search, RotateCcw } from 'lucide-react';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { toast } from 'sonner';
@@ -145,15 +145,15 @@ export default function SalesReport() {
     if (sale) {
       setFoundSale(sale);
       
-      // Check for expiry (2 days)
+      // Check for expiry (2 days / 48 hours)
       const saleDate = new Date(sale.created_at);
       const today = new Date();
-      const diff = differenceInDays(today, saleDate);
+      const diffHours = differenceInHours(today, saleDate);
       
-      // If receipt age > 2 days -> Return not allowed
-      if (diff > 2) {
+      // If receipt age > 48 hours -> Return not allowed
+      if (diffHours > 48) {
         setReturnExpired(true);
-        toast.error('Return period expired (limit: 2 days)');
+        toast.error('Return period expired (limit: 48 hours)');
       } else {
         setReturnExpired(false);
         toast.success('Sale record found');
